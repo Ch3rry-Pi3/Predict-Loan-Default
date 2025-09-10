@@ -1,2 +1,7 @@
 pandas
 pathlib
+scikit-learn
+xgboost
+mlflow
+tensorflow-cpu
+scikeras

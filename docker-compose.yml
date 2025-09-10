@@ -11,6 +11,6 @@ services:
       --backend-store-uri sqlite:////mlflow/mlflow.db
       --default-artifact-root /mlartifacts
     volumes:
-      - ./mlflow_data:/mlflow          # holds SQLite DB at /mlflow/mlflow.db
-      - ./mlflow_artifacts:/mlartifacts # stores all logged artifacts
+      - ./mlflow_data:/mlflow          
+      - ./mlflow_artifacts:/mlartifacts 
     restart: unless-stopped
