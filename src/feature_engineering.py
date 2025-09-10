@@ -32,12 +32,19 @@ def feature_engineering(input_path: str = "data/clean.csv",
     # Load dataset
     df = pd.read_csv(input_path)
 
+    # Target column to exclude from transforms
+    target_col = "loan_status"
+
     # Identify categorical vs numeric columns (simple heuristic)
-    cat_cols = df.select_dtypes(include=["object"]).columns.tolist()
+    cat_cols = df.select_dtypes(include=["object", "category"]).columns.tolist()
     num_cols = df.select_dtypes(include=["number"]).columns.tolist()
 
+    # Remove target from numeric transformations if present
+    if target_col in num_cols:
+        num_cols.remove(target_col)
+
     # One-hot encode categoricals
-    df = pd.get_dummies(df, columns=cat_cols, drop_first=True)
+    df = pd.get_dummies(df, columns=cat_cols, drop_first=True, dtype=int)
 
     # Standardise numeric columns (z-score)
     for col in num_cols:
@@ -49,7 +56,9 @@ def feature_engineering(input_path: str = "data/clean.csv",
     df.to_csv(output_path, index=False)
     print(f"✅ Feature dataset saved to {output_path} (rows={len(df)}, cols={len(df.columns)})")
 
+    # Quick peek
     print(df.head())
+    print(df.info())
 
 # -------------------------------------------------------------------
 # Run from CLI
