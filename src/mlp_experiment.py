@@ -213,8 +213,14 @@ def save_keras_model_summary(model: keras.Model, out_path: str) -> None:
         f.write(text)
 
 def save_classification_report_text(y_true: np.ndarray, y_pred: np.ndarray, out_path: str) -> None:
+
+    # Generate the classification report string
     report = classification_report(y_true, y_pred, digits=2)
+
+    # Ensure output direcotry exists
     Path(out_path).parent.mkdir(parents=True, exist_ok=True)
+
+    # Write report to disk
     with open(out_path, "w", encoding="utf-8") as f:
         f.write(report)
 
