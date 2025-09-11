@@ -38,9 +38,10 @@ load_dotenv()
 
 RANDOM_STATE = int(os.getenv("RANDOM_STATE", "5901"))
 N_RUNS_PER_MODEL = int(os.getenv("N_RUNS_PER_MODEL", "1"))
+N_FOLDS = int(os.getenv("N_FOLDS", "2"))
 TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5555")
 TARGET_COL = os.getenv("TARGET_COL", "loan_status")
-EXPERIMENT_KERAS = os.getenv("EXPERIMENT_KERAS", "loan_default_keras_v2")
+EXPERIMENT_KERAS = os.getenv("EXPERIMENT_KERAS", "loan_default_keras_v1")
 FEATURES_PATH = os.getenv("FEATURES_PATH", "data/features.csv")
 
 # -------------------------------------------------------------------
@@ -273,7 +274,12 @@ def save_confusion_matrix_png(
     ax.figure.colorbar(im, ax=ax)
     ax.set(
         xticks=np.arange(cm.shape[1]),
-        yticks=np.arange(cm.shape[0])
+        yticks=np.arange(cm.shape[0]),
+        xticklabels=labels,
+        yticklabels=labels,
+        xlabel="Predicted label",
+        ylabel="True label",
+        title="Confusion Matix"        
     )
     fig.tight_layout()
     fig.savefig(out_path, bbox_inches="tight")
@@ -436,7 +442,7 @@ def run_keras_trial(
 
     # Use small CV to reduce runtime; shuffle for robustness
     search_random_state = int(rng.integers(0, 1_000_000))
-    cv = StratifiedKFold(n_splits=2, shuffle=True, random_state=RANDOM_STATE)
+    cv = StratifiedKFold(n_splits=N_FOLDS, shuffle=True, random_state=RANDOM_STATE)
 
     with mlflow.start_run(run_name=f"KerasMLP_trial_{trial_idx + 1}", nested=True):
         # Tag run for discoverability
