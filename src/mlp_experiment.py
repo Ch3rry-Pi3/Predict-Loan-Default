@@ -43,23 +43,6 @@ TARGET_COL = os.getenv("TARGET_COL", "loan_status")
 EXPERIMENT_KERAS = os.getenv("EXPERIMENT_KERAS", "loan_default_keras_v2")
 FEATURES_PATH = os.getenv("FEATURES_PATH", "data/features.csv")
 
-# RANDOM_STATE = 5901
-# N_RUNS_PER_MODEL = 1
-# TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5555")
-# TARGET_COL = "loan_status"
-
-# EXPERIMENT_KERAS = "loan_default_keras_v1"  
-
-
-
-# # Reduce TF thread contention on Windows (helps stability with sklearn CV)
-# try:
-#     tf.config.threading.set_intra_op_parallelism_threads(1)
-#     tf.config.threading.set_inter_op_parallelism_threads(1)
-# except Exception:
-#     pass
-
-
 # -------------------------------------------------------------------
 # MLflow helpers
 # -------------------------------------------------------------------
@@ -202,12 +185,30 @@ def metrics_dict(y_true: np.ndarray, y_prob: np.ndarray, threshold: float = 0.5)
     }
 
 def save_keras_model_summary(model: keras.Model, out_path: str) -> None:
+    """
+    Save a textual Keras model summary to a file.
+
+    Parameters
+    ----------
+    model : keras.Model
+        The compiled/fitted Keras model.
+    out_path : str
+        Path for the output text file.
+    """
+
+    # Capture the summary into a string buffer
     buffer = io.StringIO()
+
+    # Run model.summary(), redirecting each line into the buffer
     model.summary(print_fn=lambda x: buffer.write(x + "\n"))
+
+    # Extract the full summary text from the buffer
     text = buffer.getvalue()
 
+    # Ensure output directory exists
     Path(out_path).parent.mkdir(parents=True, exist_ok=True)
 
+    # Write to disk
     with open(out_path, "w", encoding="utf-8") as f:
         f.write(text)
 
