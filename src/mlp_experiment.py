@@ -212,7 +212,11 @@ def save_keras_model_summary(model: keras.Model, out_path: str) -> None:
     with open(out_path, "w", encoding="utf-8") as f:
         f.write(text)
 
-def save_classification_report_text(y_true: np.ndarray, y_pred: np.ndarray, out_path: str) -> None:
+def save_classification_report_text(
+        y_true: np.ndarray, 
+        y_pred: np.ndarray, 
+        out_path: str
+    ) -> None:
     """
     Save sklearn classification_report to a text file.
 
@@ -235,6 +239,45 @@ def save_classification_report_text(y_true: np.ndarray, y_pred: np.ndarray, out_
     # Write report to disk
     with open(out_path, "w", encoding="utf-8") as f:
         f.write(report)
+
+def save_confusion_matrix_png(
+        y_true: np.ndarray, 
+        y_pred: np.ndarray, 
+        out_path: str, 
+        labels: list[str] | None = None
+) -> None:
+    """
+    Plot and save a confusion matrix as a PNG.
+    
+    Parameters
+    ----------
+    y_true : np.ndarray
+        Ground truth binary labels.
+    y_pred : np.ndarray
+        Predicted hard labels (0/1).
+    out_path : str
+        Path to the PNG file to write.
+    labels : list of str or None, optional
+        Class labels for axes; defaults to ["0", "1"].
+    """
+
+    cm = confusion_matrix(y_true, y_pred)
+    labels = labels or ["0", "1"]
+
+    # Ensure output directory exists
+    Path(out_path).parent.mkdir(parents=True, exist_ok=True)
+
+    # Heatmap
+    fig, ax = plt.subplots(dpi=150)
+    im = ax.imshow(cm)
+    ax.figure.colorbar(im, ax=ax)
+    ax.set(
+        xticks=np.arange(cm.shape[1]),
+        yticks=np.arange(cm.shape[0])
+    )
+    fig.tight_layout()
+    fig.savefig(out_path, bbox_inches="tight")
+    plt.close(fig)
 
 
 # -------------------------------------------------------------------
@@ -261,7 +304,7 @@ def build_keras_model(
     dropout : float, default=0.2
         Dropout probability applied after each hidden layer (0 disables).
     lr : float, default=1e-3
-        Learning rate for the Adam optimizer.
+        Learning rate for the Adam optimiser.
     input_dim : int or None, default=None
         Number of input features. If None, attempts to infer from SciKeras meta.
     **kwargs : Any
@@ -289,48 +332,48 @@ def build_keras_model(
     model.compile(
         optimizer=keras.optimizers.Adam(learning_rate=lr),
         loss="binary_crossentropy",
-        metrics=[keras.metrics.AUC(name="auc")],
+        metrics=[keras.metrics.BinaryAccuracy(name="accuracy")],
     )
     return model
 
 
-def _safe_auc(estimator, X, y) -> float:
-    """
-    Robust AUC scorer for estimators that may lack 'predict_proba'.
+# def _safe_auc(estimator, X, y) -> float:
+#     """
+#     Robust AUC scorer for estimators that may lack 'predict_proba'.
 
-    Parameters
-    ----------
-    estimator : Any
-        Fitted estimator supporting 'predict_proba', 'decision_function', or 'predict'.
-    X : array-like
-        Feature matrix.
-    y : array-like
-        True binary labels.
+#     Parameters
+#     ----------
+#     estimator : Any
+#         Fitted estimator supporting 'predict_proba', 'decision_function', or 'predict'.
+#     X : array-like
+#         Feature matrix.
+#     y : array-like
+#         True binary labels.
 
-    Returns
-    -------
-    float
-        ROC-AUC computed from the best-available score output.
-    """
+#     Returns
+#     -------
+#     float
+#         ROC-AUC computed from the best-available score output.
+#     """
 
-    try:
-        # Prefer predict_proba when available
-        proba = estimator.predict_proba(X)
-        if proba.ndim == 2 and proba.shape[1] > 1:
-            y_score = proba[:, 1]
-        else:
-            y_score = np.ravel(proba)
-    except Exception:
-        try:
-            # Fall back to decision_function
-            y_score = estimator.decision_function(X)
-        except Exception:
-            # Last resort: use predictions as scores
-            y_score = np.ravel(estimator.predict(X))
-    return roc_auc_score(y, y_score)
+#     try:
+#         # Prefer predict_proba when available
+#         proba = estimator.predict_proba(X)
+#         if proba.ndim == 2 and proba.shape[1] > 1:
+#             y_score = proba[:, 1]
+#         else:
+#             y_score = np.ravel(proba)
+#     except Exception:
+#         try:
+#             # Fall back to decision_function
+#             y_score = estimator.decision_function(X)
+#         except Exception:
+#             # Last resort: use predictions as scores
+#             y_score = np.ravel(estimator.predict(X))
+#     return roc_auc_score(y, y_score)
 
 
-AUC_SCORER = make_scorer(_safe_auc, greater_is_better=True)
+# AUC_SCORER = make_scorer(_safe_auc, greater_is_better=True)
 
 # -------------------------------------------------------------------
 # Keras (Neural Network) Trial
@@ -366,7 +409,7 @@ def run_keras_trial(
 
     # Early stopping with validation split inside each fit
     es = keras.callbacks.EarlyStopping(
-        monitor="val_auc", mode="max", patience=5, restore_best_weights=True
+        monitor="val_accuracy", mode="max", patience=5, restore_best_weights=True
     )
 
     # Wrap Keras model for sklearn interface
@@ -402,15 +445,15 @@ def run_keras_trial(
         # Log Keras training curves; log model manually later
         mlflow.keras.autolog(log_models=False)
 
-        # Randomized search with custom AUC scorer
+        # Randomized search
         search = RandomizedSearchCV(
             estimator=clf,
             param_distributions=dist,
             n_iter=1,
-            scoring=AUC_SCORER,     
+            scoring="accuracy",     
             cv=cv,
             random_state=search_random_state,
-            n_jobs=1,              
+            n_jobs=-1,              
             verbose=1,
             refit=True,
         )
@@ -559,6 +602,11 @@ def run_keras_experiment() -> None:
         clf_report_path = reports_dir / "keras_classification_report.txt"
         save_classification_report_text(y_test, y_pred, str(clf_report_path))
         mlflow.log_artifact(str(clf_report_path), artifact_path="reports")
+
+        # Confusion Matrix (PNG)
+        cm_path = reports_dir / "confusion_matrix.png"
+        save_confusion_matrix_png(y_test, y_pred, str(cm_path), labels=["0", "1"])
+        mlflow.log_artifact(str(cm_path), artifact_path="reports")
 
         # -----------------------------------------------------------
         # Save the final Keras model and log as artifact
