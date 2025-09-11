@@ -213,7 +213,19 @@ def save_keras_model_summary(model: keras.Model, out_path: str) -> None:
         f.write(text)
 
 def save_classification_report_text(y_true: np.ndarray, y_pred: np.ndarray, out_path: str) -> None:
+    """
+    Save sklearn classification_report to a text file.
 
+    Parameters
+    ----------
+    y_true : np.ndarry
+        Ground truth binary labels.
+    y_pred : np. ndarry
+        Predicted hard labels (0/1).
+    out_path : str
+        Path for the output text file.
+    """
+    
     # Generate the classification report string
     report = classification_report(y_true, y_pred, digits=2)
 
@@ -320,7 +332,6 @@ def _safe_auc(estimator, X, y) -> float:
 
 AUC_SCORER = make_scorer(_safe_auc, greater_is_better=True)
 
-
 # -------------------------------------------------------------------
 # Keras (Neural Network) Trial
 # -------------------------------------------------------------------
@@ -364,9 +375,8 @@ def run_keras_trial(
         input_dim=X_train.shape[1],
         verbose=1,
         callbacks=[es],
-        classes=[0, 1],                 # make classification explicit
+        classes=[0, 1],                 
         classifier=True,
-        # pass-through to model.fit(...)
         fit__validation_split=0.2,
     )
 
@@ -397,7 +407,7 @@ def run_keras_trial(
             estimator=clf,
             param_distributions=dist,
             n_iter=1,
-            scoring=_safe_auc,     
+            scoring=AUC_SCORER,     
             cv=cv,
             random_state=search_random_state,
             n_jobs=1,              
