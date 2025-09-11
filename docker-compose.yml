@@ -9,8 +9,10 @@ services:
       --host 0.0.0.0
       --port 5000
       --backend-store-uri sqlite:////mlflow/mlflow.db
-      --default-artifact-root /mlartifacts
+      --serve-artifacts
+      --default-artifact-root mlflow-artifacts:/     
+      --artifacts-destination file:///mlartifacts    
     volumes:
-      - ./mlflow_data:/mlflow          
-      - ./mlflow_artifacts:/mlartifacts 
+      - ./mlflow_data:/mlflow
+      - ./mlflow_artifacts:/mlartifacts
     restart: unless-stopped
