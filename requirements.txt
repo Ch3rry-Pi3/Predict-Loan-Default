@@ -1,5 +1,6 @@
 pandas
 pathlib
+python-dotenv
 scikit-learn
 xgboost
 mlflow
