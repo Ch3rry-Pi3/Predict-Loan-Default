@@ -2,7 +2,7 @@
 # Imports
 # -------------------------------------------------------------------
 
-import os, random
+import io, os, random
 from dotenv import load_dotenv
 from pathlib import Path
 from typing import Dict, Any, Tuple
@@ -12,6 +12,7 @@ import pandas as pd
 
 from sklearn.model_selection import train_test_split, StratifiedKFold, RandomizedSearchCV
 from sklearn.metrics import roc_auc_score, accuracy_score, precision_recall_fscore_support, make_scorer
+from sklearn.metrics import classification_report, confusion_matrix
 
 import mlflow, mlflow.sklearn, mlflow.keras
 from mlflow.tracking import MlflowClient
@@ -23,6 +24,9 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
 from scikeras.wrappers import KerasClassifier
+
+import json
+import matplotlib.pyplot as plt
 
 
 # -------------------------------------------------------------------
@@ -196,6 +200,22 @@ def metrics_dict(y_true: np.ndarray, y_prob: np.ndarray, threshold: float = 0.5)
         "recall": float(r),
         "f1": float(f1),
     }
+
+def save_keras_model_summary(model: keras.Model, out_path: str) -> None:
+    buffer = io.StringIO()
+    model.summary(print_fn=lambda x: buffer.write(x + "\n"))
+    text = buffer.getvalue()
+
+    Path(out_path).parent.mkdir(parents=True, exist_ok=True)
+
+    with open(out_path, "w", encoding="utf-8") as f:
+        f.write(text)
+
+def save_classification_report_text(y_true: np.ndarray, y_pred: np.ndarray, out_path: str) -> None:
+    report = classification_report(y_true, y_pred, digits=2)
+    Path(out_path).parent.mkdir(parents=True, exist_ok=True)
+    with open(out_path, "w", encoding="utf-8") as f:
+        f.write(report)
 
 
 # -------------------------------------------------------------------
@@ -373,7 +393,7 @@ def run_keras_trial(
             scoring=_safe_auc,     
             cv=cv,
             random_state=search_random_state,
-            n_jobs=-1,              
+            n_jobs=1,              
             verbose=1,
             refit=True,
         )
@@ -431,7 +451,7 @@ def run_keras_experiment() -> None:
     # MLflow: ensure experiment exists and is selected
     mlflow.set_tracking_uri(TRACKING_URI)
     exp_id = ensure_experiment(EXPERIMENT_KERAS)
-    mlflow.set_experiment(EXPERIMENT_KERAS)  # safe even if already created
+    mlflow.set_experiment(EXPERIMENT_KERAS)  
     _reset_active_run()
 
     # Load dataset once (train/test)
@@ -463,6 +483,7 @@ def run_keras_experiment() -> None:
         # -----------------------------------------------------------
         # Rebuild best Keras and refit on full training (keep ES)
         # -----------------------------------------------------------
+
         # Seed all frameworks for deterministic behaviour
         np.random.seed(RANDOM_STATE); random.seed(RANDOM_STATE); tf.random.set_seed(RANDOM_STATE)
 
@@ -496,13 +517,36 @@ def run_keras_experiment() -> None:
             proba = best_keras.predict(X_test)
         y_prob = proba[:, 1] if (proba.ndim == 2 and proba.shape[1] > 1) else np.ravel(proba)
 
+        # Convert probabilities to hard labels (default to threshold 0.5)
+        y_pred = (y_prob >= 0.5).astype(int)
+
         # Compute and log test metrics
         m = metrics_dict(y_test, y_prob)
         mlflow.set_tags({"model": "KerasMLP", "best": "true"})
         mlflow.log_params({f"best_{k}": v for k, v in best_cfg.items()})
         mlflow.log_metrics({f"best_test_{k}": v for k, v in m.items()})
 
+        # -----------------------------------------------------------
+        # Save & log extra artefacts (reports)
+        # -----------------------------------------------------------
+
+        reports_dir = Path("reports")
+        reports_dir.mkdir(parents=True, exist_ok=True)
+
+        # Model summary (text)
+        summary_path = reports_dir / "keras_best_model_summary.txt"
+        save_keras_model_summary(best_keras.model_, str(summary_path))
+        mlflow.log_artifact(str(summary_path), artifact_path="reports")
+
+        # Classification report (text)
+        clf_report_path = reports_dir / "keras_classification_report.txt"
+        save_classification_report_text(y_test, y_pred, str(clf_report_path))
+        mlflow.log_artifact(str(clf_report_path), artifact_path="reports")
+
+        # -----------------------------------------------------------
         # Save the final Keras model and log as artifact
+        # -----------------------------------------------------------
+
         best_file = "keras_best_model.keras"
         # Ensure output directory exists (artifact path handled by MLflow)
         best_keras.model_.save(best_file)
