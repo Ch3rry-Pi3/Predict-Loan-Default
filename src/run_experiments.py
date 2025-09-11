@@ -63,8 +63,25 @@ def metrics_dict(y_true, y_prob, threshold=0.5):
         "f1": float(f1)
     }
 
-def build_keras_model():
-    pass
+def build_keras_model(hidden_layers=2, hidden_units=128, dropout=0.2, lr=1e-3, input_dim=None):
+    """Factory function KerasClassifier"""
+    model = keras.Sequential([layers.Input(shape=(input_dim,))])
+
+    for _ in range(hidden_layers):
+        model.add(layers.Dense(hidden_units, activation="relu"))
+        if dropout and dropout > 0:
+            model.add(layers.Dropout(dropout))
+    
+    model.add(layers.Dense(1, activation="sigmoid"))
+    
+    model.compile(
+        optimiser=keras.optimizers.Adam(learning_rate=lr),
+        loss="binary_crossentrophy",
+        metrics=[keras.metrics.AUC(name="auc")],
+    )
+
+    return model
+
 
 if __name__ == "__main__":
     print("OK")
