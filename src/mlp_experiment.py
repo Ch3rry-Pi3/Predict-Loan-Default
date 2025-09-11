@@ -25,7 +25,6 @@ from tensorflow import keras
 from tensorflow.keras import layers
 from scikeras.wrappers import KerasClassifier
 
-import json
 import matplotlib.pyplot as plt
 
 
@@ -341,45 +340,6 @@ def build_keras_model(
         metrics=[keras.metrics.BinaryAccuracy(name="accuracy")],
     )
     return model
-
-
-# def _safe_auc(estimator, X, y) -> float:
-#     """
-#     Robust AUC scorer for estimators that may lack 'predict_proba'.
-
-#     Parameters
-#     ----------
-#     estimator : Any
-#         Fitted estimator supporting 'predict_proba', 'decision_function', or 'predict'.
-#     X : array-like
-#         Feature matrix.
-#     y : array-like
-#         True binary labels.
-
-#     Returns
-#     -------
-#     float
-#         ROC-AUC computed from the best-available score output.
-#     """
-
-#     try:
-#         # Prefer predict_proba when available
-#         proba = estimator.predict_proba(X)
-#         if proba.ndim == 2 and proba.shape[1] > 1:
-#             y_score = proba[:, 1]
-#         else:
-#             y_score = np.ravel(proba)
-#     except Exception:
-#         try:
-#             # Fall back to decision_function
-#             y_score = estimator.decision_function(X)
-#         except Exception:
-#             # Last resort: use predictions as scores
-#             y_score = np.ravel(estimator.predict(X))
-#     return roc_auc_score(y, y_score)
-
-
-# AUC_SCORER = make_scorer(_safe_auc, greater_is_better=True)
 
 # -------------------------------------------------------------------
 # Keras (Neural Network) Trial
