@@ -33,6 +33,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
+import joblib
 
 # -------------------------------------------------------------------
 # Configurations (readable from environment; with safe defaults)
@@ -631,14 +632,20 @@ def run_xgb_experiment() -> None:
         mlflow.log_params({f"best_{k}": v for k, v in best_params.items()})
         mlflow.log_metrics({f"best_test_{k}": v for k, v in m.items()})
 
-        # artefacts
+        # -----------------------------------------------------------
+        # Save the final XGBoost model and log as artifact
+        # -----------------------------------------------------------
+
         reports_dir = Path("reports"); reports_dir.mkdir(parents=True, exist_ok=True)
         save_classification_report_text(y_test, y_pred, str(reports_dir / "xgb_classification_report.txt"))
         save_confusion_matrix_png(y_test, y_pred, str(reports_dir / "xgb_confusion_matrix.png"), labels=["0","1"])
-        import joblib
+
         joblib.dump(best_xgb, "xgb_best_model.joblib")
         mlflow.log_artifact("xgb_best_model.joblib", artifact_path="best_model")
         os.remove("xgb_best_model.joblib")
+
+    # Final confirmation message
+    print(f"✅ XGBoost: Logged {N_RUNS_PER_MODEL} trial run(s) + 1 parent run to MLflow at {TRACKING_URI}.")
 
 # -------------------------------------------------------------------
 # Orchestrator (Keras)
@@ -735,7 +742,7 @@ def run_keras_experiment() -> None:
         mlflow.log_metrics({f"best_test_{k}": v for k, v in m.items()})
 
         # -----------------------------------------------------------
-        # Save & log extra artefacts (reports)
+        # Save & log extra artefacts for Keras model
         # -----------------------------------------------------------
 
         reports_dir = Path("reports")
