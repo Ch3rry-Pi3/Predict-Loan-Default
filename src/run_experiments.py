@@ -11,10 +11,10 @@ import numpy as np
 import pandas as pd
 
 from sklearn.model_selection import train_test_split, StratifiedKFold, RandomizedSearchCV
-from sklearn.metrics import roc_auc_score, accuracy_score, precision_recall_fscore_support, make_scorer
+from sklearn.metrics import roc_auc_score, accuracy_score, precision_recall_fscore_support
 from sklearn.metrics import classification_report, confusion_matrix
 
-import mlflow, mlflow.sklearn, mlflow.keras
+import mlflow, mlflow.keras
 from mlflow.tracking import MlflowClient
 
 # Must be set BEFORE importing tensorflow
@@ -37,13 +37,28 @@ import matplotlib.pyplot as plt
 # Load .env variables (if present)
 load_dotenv()
 
+# Core reproducibility
 RANDOM_STATE = int(os.getenv("RANDOM_STATE", "5901"))
+
+# Search/CV settings
 N_RUNS_PER_MODEL = int(os.getenv("N_RUNS_PER_MODEL", "1"))
 N_FOLDS = int(os.getenv("N_FOLDS", "2"))
-TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5555")
-TARGET_COL = os.getenv("TARGET_COL", "loan_status")
-EXPERIMENT_KERAS = os.getenv("EXPERIMENT_KERAS", "loan_default_keras_v1")
+
+# Data paths/columns
 FEATURES_PATH = os.getenv("FEATURES_PATH", "data/features.csv")
+TARGET_COL = os.getenv("TARGET_COL", "loan_status")
+
+# MLflow
+TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5555")
+EXPERIMENT_XGB = os.getenv("EXPERIMENT_XGB", "loan_default_xgb_v1")
+EXPERIMENT_KERAS = os.getenv("EXPERIMENT_KERAS", "loan_default_keras_v1")
+
+# Model toggles
+RUN_XGB = os.getenv("RUN_XGB", "1") == "1"
+RUN_KERAS = os.getenv("RUN_KERAS", "1") == "1"
+
+# XGBoost device
+XGB_DEVICE = os.getenv("XGB_DEVICE", "cpu")
 
 # -------------------------------------------------------------------
 # MLflow helpers
@@ -344,6 +359,21 @@ def build_keras_model(
     return model
 
 # -------------------------------------------------------------------
+# XGBoost Trial
+# -------------------------------------------------------------------
+
+def run_xgb_trial(
+        X_train: pd.DataFrame,
+        X_test: pd.DataFrame,
+        y_train: np.ndarray,
+        y_test: np.ndarray,
+        trial_idx: int,
+        rng: np.random.Generator,
+) -> Dict[str, Any]:
+    """Run a single randomised-search trial for XGBoost and log to MLflow"""
+    pass
+
+# -------------------------------------------------------------------
 # Keras (Neural Network) Trial
 # -------------------------------------------------------------------
 
@@ -458,9 +488,27 @@ def run_keras_trial(
 
         return {"params": search.best_params_, "cv_auc": float(search.best_score_)}
 
+# -------------------------------------------------------------------
+# Orchestrator (XGBoost)
+# -------------------------------------------------------------------
+
+def run_xgb_experiment() -> None:
+    """
+    Run the Keras MLP experiment: multiple trials + final refit and logging.
+
+    Notes
+    -----
+    - Ensures the MLflow experiment exists and is active.
+    - Loads/validates data once; reuses across trials.
+    - Runs 'N_RUNS_PER_MODEL' randomized-search trials (nested runs).
+    - Rebuilds and refits the best configuration on the full training set.
+    - Logs final test metrics and best model artifact.
+    """
+
+    pass
 
 # -------------------------------------------------------------------
-# Orchestrator
+# Orchestrator (Keras)
 # -------------------------------------------------------------------
 
 def run_keras_experiment() -> None:
@@ -597,4 +645,8 @@ def run_keras_experiment() -> None:
 if __name__ == "__main__":
     # Seed all frameworks for reproducibility when run as a script
     np.random.seed(RANDOM_STATE); random.seed(RANDOM_STATE); tf.random.set_seed(RANDOM_STATE)
-    run_keras_experiment()
+
+    if RUN_XGB:
+        run_xgb_experiment()
+    if RUN_KERAS:
+        run_keras_experiment()
