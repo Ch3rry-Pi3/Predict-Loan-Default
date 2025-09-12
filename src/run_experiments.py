@@ -14,7 +14,7 @@ from sklearn.model_selection import train_test_split, StratifiedKFold, Randomize
 from sklearn.metrics import roc_auc_score, accuracy_score, precision_recall_fscore_support
 from sklearn.metrics import classification_report, confusion_matrix
 
-import mlflow, mlflow.keras
+import mlflow, mlflow.xgboost, mlflow.keras
 from mlflow.tracking import MlflowClient
 
 # Must be set BEFORE importing tensorflow
@@ -295,7 +295,7 @@ def save_confusion_matrix_png(
         yticklabels=labels,
         xlabel="Predicted label",
         ylabel="True label",
-        title="Confusion Matix"        
+        title="Confusion Matrix"        
     )
     fig.tight_layout()
     fig.savefig(out_path, bbox_inches="tight")
@@ -350,7 +350,7 @@ def build_keras_model(
             model.add(layers.Dropout(dropout))
     model.add(layers.Dense(1, activation="sigmoid"))
 
-    # Compile with AUC metric
+    # Compile with accuracy metric
     model.compile(
         optimizer=keras.optimizers.Adam(learning_rate=lr),
         loss="binary_crossentropy",
@@ -375,7 +375,7 @@ def run_xgb_trial(
     # Base esitmator
     clf = XGBClassifier(
         objective="binary:logistic",
-        eval_metric="auc",
+        eval_metric="error",
         tree_method="hist",
         enable_categorical=False,
         random_state=int(rng.integers(0, 1_000_000))
@@ -409,7 +409,7 @@ def run_xgb_trial(
             estimator=clf,
             param_distributions=dist,
             n_iter=1,
-            scoring="roc_auc",
+            scoring="accuracy",
             cv=cv,
             random_state=search_random_state,
             n_jobs=-1,
@@ -417,7 +417,22 @@ def run_xgb_trial(
             refit=True,
         )
     
-    
+        # Early stopping via eval_set
+        search.fit(
+            X_train, y_train,
+            eval_set=[(X_train, y_train), (X_test, y_test)],
+            early_stopping_rounds=30,
+            verbose = False,
+        )
+
+        best = search.best_estimator_
+        y_prob = best.predict_proba(X_test)[:, 1]
+        m = metrics_dict(y_test, y_prob)
+
+        mlflow.log_params({"search": "RandomizedSearchCV", **search.best_params_})
+        mlflow.log_metrics({"cv_accuracy": float(search.best_score_), **m})
+
+        return {"params": search.best_params_, "cv_accuracy": float(search.best_score_)}
 
 # -------------------------------------------------------------------
 # Keras (Neural Network) Trial
@@ -494,7 +509,7 @@ def run_keras_trial(
             estimator=clf,
             param_distributions=dist,
             n_iter=1,
-            scoring="roc_auc",     
+            scoring="accuracy",     
             cv=cv,
             random_state=search_random_state,
             n_jobs=-1,              
@@ -523,7 +538,7 @@ def run_keras_trial(
 
         # Log params/metrics
         mlflow.log_params({"search": "RandomizedSearchCV", **search.best_params_})
-        mlflow.log_metrics({"cv_auc": float(search.best_score_), **m})
+        mlflow.log_metrics({"cv_accuracy": float(search.best_score_), **m})
 
         # Log underlying Keras model (Keras v3 single-file format)
         model_file = f"keras_trial_{trial_idx+1}.keras"
@@ -532,7 +547,7 @@ def run_keras_trial(
         mlflow.log_artifact(model_file, artifact_path="model")
         os.remove(model_file)
 
-        return {"params": search.best_params_, "cv_auc": float(search.best_score_)}
+        return {"params": search.best_params_, "cv_accuracy": float(search.best_score_)}
 
 # -------------------------------------------------------------------
 # Orchestrator (XGBoost)
@@ -590,7 +605,7 @@ def run_keras_experiment() -> None:
         print("Parent run_id:", parent_run.info.run_id)
         print("Artifact base (parent):", mlflow.get_artifact_uri())
 
-        # Track best trial by CV AUC
+        # Track best trial by CV accuracy
         best = None
 
         # Loop over randomized trials
@@ -598,8 +613,8 @@ def run_keras_experiment() -> None:
             # Run a trial and collect results
             res = run_keras_trial(X_train, X_test, y_train, y_test, i, rng)
 
-            # Keep best by cv_auc
-            if best is None or res["cv_auc"] > best["cv_auc"]:
+            # Keep best by cv_accuracy
+            if best is None or res["cv_accuracy"] > best["cv_accuracy"]:
                 best = res
 
         # -----------------------------------------------------------
@@ -611,7 +626,7 @@ def run_keras_experiment() -> None:
 
         # Early stopping for the final fit
         es = keras.callbacks.EarlyStopping(
-            monitor="val_auc", mode="max", patience=5, restore_best_weights=True
+            monitor="val_accuracy", mode="max", patience=5, restore_best_weights=True
         )
 
         # Unpack best configuration from search
