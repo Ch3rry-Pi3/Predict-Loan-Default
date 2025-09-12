@@ -20,6 +20,8 @@ from mlflow.tracking import MlflowClient
 # Must be set BEFORE importing tensorflow
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
+from xgboost import XGBClassifier
+
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
