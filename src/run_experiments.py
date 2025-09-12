@@ -27,6 +27,10 @@ from tensorflow import keras
 from tensorflow.keras import layers
 from scikeras.wrappers import KerasClassifier
 
+# Must be set BEFORE importing matplotlib.pyplot
+os.environ["MPLBACKEND"] = "Agg"
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 
@@ -421,7 +425,6 @@ def run_xgb_trial(
         search.fit(
             X_train, y_train,
             eval_set=[(X_train, y_train), (X_test, y_test)],
-            early_stopping_rounds=30,
             verbose = False,
         )
 
@@ -602,7 +605,7 @@ def run_xgb_experiment() -> None:
 
         # Refit best configuration on full training set with early stopping
         best_params = best["params"]
-        final_xgb = XGBClassifier(
+        best_xgb = XGBClassifier(
             objective="binary:logistic",
             eval_metric="error",
             tree_method="hist",
@@ -611,7 +614,31 @@ def run_xgb_experiment() -> None:
             **best_params,
         )
 
-        
+        mlflow.set_tags({"model": "XGBoost", "best": "true"})
+        mlflow.xgboost.autolog(log_models=False)
+        best_xgb.fit(X_train, y_train)
+
+        # As above, prefer probabilities but fall back safely
+        try:
+            proba = best_xgb.predict_proba(X_test)
+        except Exception:
+            proba = best_xgb.predict(X_test)
+        y_prob = proba[:, 1] if (proba.ndim == 2 and proba.shape[1] > 1) else np.ravel(proba)
+
+        y_pred = (y_prob >= 0.5).astype(int)
+        m = metrics_dict(y_test, y_prob)
+
+        mlflow.log_params({f"best_{k}": v for k, v in best_params.items()})
+        mlflow.log_metrics({f"best_test_{k}": v for k, v in m.items()})
+
+        # artefacts
+        reports_dir = Path("reports"); reports_dir.mkdir(parents=True, exist_ok=True)
+        save_classification_report_text(y_test, y_pred, str(reports_dir / "xgb_classification_report.txt"))
+        save_confusion_matrix_png(y_test, y_pred, str(reports_dir / "xgb_confusion_matrix.png"), labels=["0","1"])
+        import joblib
+        joblib.dump(best_xgb, "xgb_best_model.joblib")
+        mlflow.log_artifact("xgb_best_model.joblib", artifact_path="best_model")
+        os.remove("xgb_best_model.joblib")
 
 # -------------------------------------------------------------------
 # Orchestrator (Keras)
