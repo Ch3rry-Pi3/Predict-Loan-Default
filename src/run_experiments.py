@@ -555,7 +555,7 @@ def run_keras_trial(
 
 def run_xgb_experiment() -> None:
     """
-    Run the Keras MLP experiment: multiple trials + final refit and logging.
+    Run the XGBoost experiment: multiple trials + final refit and logging.
 
     Notes
     -----
@@ -566,7 +566,52 @@ def run_xgb_experiment() -> None:
     - Logs final test metrics and best model artifact.
     """
 
-    pass
+    # MLflow: ensure experiment exists and is selected
+    mlflow.set_tracking_uri(TRACKING_URI)
+    exp_id = ensure_experiment(EXPERIMENT_XGB)
+    mlflow.set_experiment(EXPERIMENT_XGB)  
+    _reset_active_run()
+
+    # Load dataset once (train/test)
+    X_train, X_test, y_train, y_test = load_data()
+
+    # RNG for reproducibility across trials
+    rng = np.random.default_rng(RANDOM_STATE)
+
+    # ---------------------------------------------------------------
+    # XGBoost Experiment (parent run)
+    # ---------------------------------------------------------------
+
+    with mlflow.start_run(run_name="XGBoost_group") as parent_run:
+        # Show parent context / artifact base
+        print("Parent run_id:", parent_run.info.run_id)
+        print("Artifact base (parent):", mlflow.get_artifact_uri())
+
+        # Trials -> Select best by cv_accurary
+        best = None
+        for i in range(N_RUNS_PER_MODEL):
+            # Run a trial and collect results
+            res = run_xgb_trial(X_train, X_test, y_train, y_test, i, rng)
+
+            # Keep best by cv_accuracy
+            if best is None or res["cv_accuracy"] > best["cv_accuracy"]:
+                best = res
+        
+        # Seed frameworks
+        np.random.seed(RANDOM_STATE); random.seed(RANDOM_STATE)
+
+        # Refit best configuration on full training set with early stopping
+        best_params = best["params"]
+        final_xgb = XGBClassifier(
+            objective="binary:logistic",
+            eval_metric="error",
+            tree_method="hist",
+            enable_categorical=False,
+            random_state=RANDOM_STATE,
+            **best_params,
+        )
+
+        
 
 # -------------------------------------------------------------------
 # Orchestrator (Keras)
@@ -598,17 +643,16 @@ def run_keras_experiment() -> None:
     rng = np.random.default_rng(RANDOM_STATE)
 
     # ---------------------------------------------------------------
-    # Keras (Neural Network) Experiment
+    # Keras (Neural Network) Experiment (parent run)
     # ---------------------------------------------------------------
+
     with mlflow.start_run(run_name="KerasMLP_group") as parent_run:
         # Show parent context / artifact base
         print("Parent run_id:", parent_run.info.run_id)
         print("Artifact base (parent):", mlflow.get_artifact_uri())
 
-        # Track best trial by CV accuracy
+        # Trials -> Select best by cv_accurary
         best = None
-
-        # Loop over randomized trials
         for i in range(N_RUNS_PER_MODEL):
             # Run a trial and collect results
             res = run_keras_trial(X_train, X_test, y_train, y_test, i, rng)
@@ -681,7 +725,7 @@ def run_keras_experiment() -> None:
         mlflow.log_artifact(str(clf_report_path), artifact_path="reports")
 
         # Confusion Matrix (PNG)
-        cm_path = reports_dir / "confusion_matrix.png"
+        cm_path = reports_dir / "keras_confusion_matrix.png"
         save_confusion_matrix_png(y_test, y_pred, str(cm_path), labels=["0", "1"])
         mlflow.log_artifact(str(cm_path), artifact_path="reports")
 
@@ -696,7 +740,7 @@ def run_keras_experiment() -> None:
         os.remove(best_file)
 
     # Final confirmation message
-    print(f"✅ Done. Logged {N_RUNS_PER_MODEL} trial run(s) + 1 parent run to MLflow at {TRACKING_URI}.")
+    print(f"✅ Keras: Logged {N_RUNS_PER_MODEL} trial run(s) + 1 parent run to MLflow at {TRACKING_URI}.")
 
 
 # -------------------------------------------------------------------
