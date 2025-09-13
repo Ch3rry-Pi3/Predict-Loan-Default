@@ -1,12 +1,21 @@
 # -------------------------------------------------------------------
-# Simple feature engineering module
+# Feature engineering module
 # -------------------------------------------------------------------
 
+import os
 import pandas as pd
 from pathlib import Path
+from dotenv import load_dotenv
 
-def feature_engineering(input_path: str = "data/clean.csv",
-                        output_path: str = "data/features.csv") -> None:
+# Load environment variables
+load_dotenv()
+
+# Config (env-driven with fallbacks)
+CLEAN_DATA_PATH = os.getenv("CLEAN_DATA_PATH", "data/silver/clean.csv")
+FEATURES_PATH = os.getenv("FEATURES_PATH", "data/gold/features.csv")
+
+def feature_engineering(input_path: str = CLEAN_DATA_PATH,
+                        output_path: str = FEATURES_PATH) -> None:
     """
     Load the cleaned dataset, apply simple feature engineering, and save to a new CSV.
 
@@ -26,6 +35,7 @@ def feature_engineering(input_path: str = "data/clean.csv",
     -------
     None
     """
+
     # Ensure output directory exists
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)
 
@@ -63,5 +73,6 @@ def feature_engineering(input_path: str = "data/clean.csv",
 # -------------------------------------------------------------------
 # Run from CLI
 # -------------------------------------------------------------------
+
 if __name__ == "__main__":
     feature_engineering()
