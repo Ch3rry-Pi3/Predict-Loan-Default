@@ -1,13 +1,10 @@
-from src.preprocessing.import_data import import_data
-from src.preprocessing.clean_data import clean_data
-from src.feature_engineering import feature_engineering
-from src.experiments.exp_cli import run_cli
+
+from src.preprocessing.preprocess_cli import run_preprocessing
+from src.experiments.exp_cli import run_experiments
 
 def main():
-    import_data()
-    clean_data()
-    feature_engineering()
-    run_cli()
+    run_preprocessing()
+    run_experiments()
 
 if __name__ == "__main__":
     main()

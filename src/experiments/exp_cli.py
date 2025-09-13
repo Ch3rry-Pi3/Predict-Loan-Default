@@ -5,7 +5,8 @@
 if __name__ == "__main__" and __package__ is None:
     import sys
     from pathlib import Path
-    # project root = two levels up from this file
+    
+    # Project root = two levels up from this file
     sys.path.append(str(Path(__file__).resolve().parents[2]))
 
 import os, random
@@ -24,17 +25,20 @@ os.environ.setdefault("MPLBACKEND", "Agg")
 # Entry Point
 # -------------------------------------------------------------------
 
-def run_cli():
+def run_experiments():
+
+    # Set random seeds for reproducibility
     np.random.seed(RANDOM_STATE); random.seed(RANDOM_STATE); tf.random.set_seed(RANDOM_STATE)
 
+    # Run stages based on .env toggles (defaults: all on)
     if RUN_RF:
         run_rf_experiment()
 
-    # if RUN_XGB:
-    #     run_xgb_experiment()
+    if RUN_XGB:
+        run_xgb_experiment()
 
-    # if RUN_KERAS:
-    #     run_keras_experiment()
+    if RUN_KERAS:
+        run_keras_experiment()
 
 if __name__ == "__main__":
-    run_cli()
+    run_experiments()
