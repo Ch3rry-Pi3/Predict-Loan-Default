@@ -53,3 +53,34 @@ def run_rf_experiment() -> None:
         y_pred = (y_prob >= 0.5).astype(int)
 
         m = metrics_dict(y_test, y_prob)
+
+        mlflow.log_params({"best_{k}": v for k, v in best_params.items()})
+        mlflow.log_metrics({"best_test_{k}": v for k, v in m.items()})
+
+        # Reports
+        reports = Path("reports"); reports.mkdir(parents=True, exist_ok=True)
+        save_classification_report_text(y_test, y_pred, str(reports / "rf_classification_report.txt"))
+        save_confusion_matrix_png(y_test, y_pred, str(reports / "rf_confusion_matrix.png"), labels=["0", "1"])
+
+        # Feature importances (CSV)
+        try:
+            import pandas as pd
+            fi = pd.DataFrame(
+                {
+                    "feature": X_train.columns,
+                    "importance": best_rf.feature_importances_,
+                }
+            ).sort_values(by="importance", ascending=False)
+            fi_path = reports / "rf_feature_importances.csv"
+            fi.to_csv(fi_path, index=False)
+            mlflow.log_artifact(str(fi_path), artifact_path="reports")
+
+        except Exception:
+            pass
+
+        # Save model artifact
+        joblib.dump(best_rf, "rf_best_model.joblib")
+        mlflow.log_artifact("rf_best_model.joblib", artifact_path="best_model")
+        os.remove("rf_best_model.joblib")
+
+    print(f"✅ RandomForest: Logged {N_RUNS_PER_MODEL} trial run(s) + 1 parent run to MLflow at {TRACKING_URI}.")
