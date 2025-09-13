@@ -67,7 +67,7 @@ def run_keras_experiment() -> None:
                 best = res
 
         # -----------------------------------------------------------
-        # Rebuild best Keras and refit on full training (keep ES)
+        # Rebuild best Keras and refit on full training
         # -----------------------------------------------------------
 
         # Seed all frameworks for deterministic behaviour
