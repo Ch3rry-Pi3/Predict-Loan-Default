@@ -1,6 +1,6 @@
 # **Loan Default Prediction – End-to-End ML Pipeline**
 
-This project implements a complete machine learning workflow for **Loan Default Prediction**, powered by data from [OpenML](https://www.openml.org/d/45021).
+This project implements a complete machine learning workflow for **Loan Default Prediction**, powered by data from [OpenML](https://www.openml.org).
 The pipeline follows the **Medallion Architecture** (Bronze → Silver → Gold), includes preprocessing, three ML model families, and experiment tracking with **MLflow**.
 
 
@@ -32,3 +32,4 @@ mlops-loan-default/
 ```
 
 > Note: `.venv/` and other transient folders (e.g., `__pycache__/`) are ignored from version control.
+
