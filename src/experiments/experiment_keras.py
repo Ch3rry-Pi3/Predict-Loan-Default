@@ -7,7 +7,8 @@ from pathlib import Path
 import numpy as np
 import mlflow, mlflow.keras
 from scikeras.wrappers import KerasClassifier
-from tensorflow import keras as tfk
+import tensorflow as tf
+from tensorflow import keras
 from .config import RANDOM_STATE, TRACKING_URI, EXPERIMENT_KERAS, N_RUNS_PER_MODEL
 from .mlflow_utils import ensure_experiment, reset_active_run
 from .data_utils import load_data

@@ -2,13 +2,14 @@
 # Imports
 # -------------------------------------------------------------------
 
+import os
 import numpy as np
 import pandas as pd
 from typing import Dict, Any
 import mlflow, mlflow.keras
 from sklearn.model_selection import StratifiedKFold, RandomizedSearchCV
 from scikeras.wrappers import KerasClassifier
-from tensorflow import keras as tfk
+from tensorflow import keras
 from .config import N_FOLDS, RANDOM_STATE
 from .metrics_utils import metrics_dict
 from .models_keras import build_keras_model

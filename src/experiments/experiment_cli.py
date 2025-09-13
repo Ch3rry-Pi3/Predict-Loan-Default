@@ -2,12 +2,18 @@
 # Imports
 # -------------------------------------------------------------------
 
+if __name__ == "__main__" and __package__ is None:
+    import sys
+    from pathlib import Path
+    # project root = two levels up from this file
+    sys.path.append(str(Path(__file__).resolve().parents[2]))
+
 import os, random
 import numpy as np
 import tensorflow as tf
-from .config import RANDOM_STATE, RUN_XGB, RUN_KERAS
-from .experiment_xgb import run_xgb_experiment
-from .experiment_keras import run_keras_experiment
+from src.experiments.config import RANDOM_STATE, RUN_XGB, RUN_KERAS
+from src.experiments.experiment_xgb import run_xgb_experiment
+from src.experiments.experiment_keras import run_keras_experiment
 
 # Must be set BEFORE importing pyplot anywhere else
 os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")

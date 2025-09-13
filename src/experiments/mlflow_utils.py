@@ -48,7 +48,7 @@ def ensure_experiment(name: str) -> str:
     return exp_id
 
 
-def _reset_active_run() -> None:
+def reset_active_run() -> None:
     """
     End any MLflow run that is accidentally still open.
 

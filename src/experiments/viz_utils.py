@@ -4,6 +4,7 @@
 
 import io, os
 from pathlib import Path
+from tensorflow import keras
 import numpy as np
 import matplotlib
 os.environ.setdefault("MPLBACKEND", "Agg")
@@ -15,7 +16,7 @@ from sklearn.metrics import classification_report, confusion_matrix
 # Save artifacts helpers
 # -------------------------------------------------------------------
 
-def save_keras_model_summary(model: keras.Model, out_path: str) -> None:
+def save_keras_model_summary(model: "keras.Model", out_path: str) -> None:
     """
     Save a textual Keras model summary to a file.
 

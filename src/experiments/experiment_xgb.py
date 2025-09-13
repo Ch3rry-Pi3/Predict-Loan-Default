@@ -36,7 +36,7 @@ def run_xgb_experiment() -> None:
     mlflow.set_tracking_uri(TRACKING_URI)
     exp_id = ensure_experiment(EXPERIMENT_XGB)
     mlflow.set_experiment(EXPERIMENT_XGB)  
-    _reset_active_run()
+    reset_active_run()
 
     # Load dataset once (train/test)
     X_train, X_test, y_train, y_test = load_data()
