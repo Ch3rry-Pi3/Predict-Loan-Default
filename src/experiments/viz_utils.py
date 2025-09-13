@@ -10,7 +10,7 @@ import matplotlib
 os.environ.setdefault("MPLBACKEND", "Agg")
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from sklearn.metrics import classification_report, confusion_matrix
+from sklearn.metrics import classification_report, confusion_matrix, ConfusionMatrixDisplay
 
 # -------------------------------------------------------------------
 # Save artifacts helpers
@@ -73,11 +73,14 @@ def save_classification_report_text(
         f.write(report)
 
 def save_confusion_matrix_png(
-        y_true: np.ndarray, 
-        y_pred: np.ndarray, 
-        out_path: str, 
-        labels: list[str] | None = None
-) -> None:
+        y_true,
+        y_pred,
+        out_path,
+        labels=None,
+        cmap="Blues",
+        normalize=None,
+        values_format=None,
+):
     """
     Plot and save a confusion matrix as a PNG.
     
@@ -91,27 +94,26 @@ def save_confusion_matrix_png(
         Path to the PNG file to write.
     labels : list of str or None, optional
         Class labels for axes; defaults to ["0", "1"].
+    cmap : str, default = "Blues"
+        Matplotlib colourmap.
+    normalize : {"true", "pred", "all"}, optional
+        If given, confusion matrix will be normalised.
+    values_format : str, optional
+        Format of cell annotations (e.g., "d", ".2f", ".0%")
     """
 
-    cm = confusion_matrix(y_true, y_pred)
-    labels = labels or ["0", "1"]
+    # Compute CM 
+    cm = confusion_matrix(y_true, y_pred, normalize=normalize)
 
-    # Ensure output directory exists
+    # Pick sensible default formatting
+    if values_format is None:
+        values_format = ".0%" if normalize else "d"
+
+    # Build the display 
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=labels)
+    disp.plot(cmap=cmap, values_format=values_format)
+
+    plt.title("Confusion Matrix")
     Path(out_path).parent.mkdir(parents=True, exist_ok=True)
-
-    # Heatmap
-    fig, ax = plt.subplots(dpi=150)
-    im = ax.imshow(cm)
-    ax.figure.colorbar(im, ax=ax)
-    ax.set(
-        xticks=np.arange(cm.shape[1]),
-        yticks=np.arange(cm.shape[0]),
-        xticklabels=labels,
-        yticklabels=labels,
-        xlabel="Predicted label",
-        ylabel="True label",
-        title="Confusion Matrix"        
-    )
-    fig.tight_layout()
-    fig.savefig(out_path, bbox_inches="tight")
-    plt.close(fig)
+    plt.savefig(out_path, bbox_inches="tight", dpi=150)
+    plt.close()

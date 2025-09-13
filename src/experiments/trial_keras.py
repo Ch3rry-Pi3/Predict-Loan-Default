@@ -60,6 +60,7 @@ def run_keras_trial(
         classes=[0, 1],                 
         classifier=True,
         fit__validation_split=0.2,
+        random_state=int(rng.integers(0, 1_000_000)),
     )
 
     # Define random search space
@@ -70,7 +71,6 @@ def run_keras_trial(
         "model__lr": [1e-3, 3e-4, 1e-4],
         "batch_size": [32, 64, 128],
         "epochs": [25, 40, 60],
-        "random_state": [int(rng.integers(0, 1_000_000))],  # SciKeras seeds per fit
     }
 
     # Use small CV to reduce runtime; shuffle for robustness

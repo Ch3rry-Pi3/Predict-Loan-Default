@@ -25,10 +25,12 @@ TARGET_COL = os.getenv("TARGET_COL", "loan_status")
 
 # MLflow
 TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5555")
+EXPERIMENT_RF = os.getenv("EXPERIMENT_RF", "loan_default_rf_v1")
 EXPERIMENT_XGB = os.getenv("EXPERIMENT_XGB", "loan_default_xgb_v1")
 EXPERIMENT_KERAS = os.getenv("EXPERIMENT_KERAS", "loan_default_keras_v1")
 
 # Toggles
+RUN_RF = os.getenv("RUN_RF", "1") == "1"
 RUN_XGB = os.getenv("RUN_XGB", "1") == "1"
 RUN_KERAS = os.getenv("RUN_KERAS", "1") == "1"
 

@@ -39,7 +39,7 @@ def run_rf_experiment() -> None:
             **best_params,
         )
 
-        mlflow.set_tags({"model": "RandomForest"m "best": "true"})
+        mlflow.set_tags({"model": "RandomForest", "best": "true"})
         mlflow.sklearn.autolog(log_models=False)
         best_rf.fit(X_train, y_train)
 
@@ -54,8 +54,8 @@ def run_rf_experiment() -> None:
 
         m = metrics_dict(y_test, y_prob)
 
-        mlflow.log_params({"best_{k}": v for k, v in best_params.items()})
-        mlflow.log_metrics({"best_test_{k}": v for k, v in m.items()})
+        mlflow.log_params({f"best_{k}": v for k, v in best_params.items()})
+        mlflow.log_metrics({f"best_test_{k}": v for k, v in m.items()})
 
         # Reports
         reports = Path("reports"); reports.mkdir(parents=True, exist_ok=True)

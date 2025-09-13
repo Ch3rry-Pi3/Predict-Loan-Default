@@ -66,7 +66,7 @@ def run_rf_trial(
             proba = best.predict(X_test)
             y_prob = proba[:, 1] if getattr(proba, "ndim", 1) > 1 else np.ravel(proba)
 
-        m = metrics_dict(y_test, y_prob=)
+        m = metrics_dict(y_test, y_prob)
         
         mlflow.log_params({"search": "RandomizedSearchCV", **search.best_params_})
         mlflow.log_metrics({"cv_accuracy": float(search.best_score_), **m})
