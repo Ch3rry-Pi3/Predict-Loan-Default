@@ -70,15 +70,16 @@ def run_xgb_trial(
             refit=True,
         )
     
-        # Early stopping via eval_set
-        search.fit(
-            X_train, y_train,
-            eval_set=[(X_train, y_train), (X_test, y_test)],
-            verbose = False,
-        )
+        # Fit the model
+        search.fit(X_train, y_train)
 
         best = search.best_estimator_
-        y_prob = best.predict_proba(X_test)[:, 1]
+        try:
+            y_prob = best.predict_proba(X_test)[:, 1]
+        except Exception:
+            proba = best.predict(X_test)
+            y_prob = proba[:, 1] if getattr(proba, "ndim", 1) > 1 else np.ravel(proba)
+        
         m = metrics_dict(y_test, y_prob)
 
         mlflow.log_params({"search": "RandomizedSearchCV", **search.best_params_})

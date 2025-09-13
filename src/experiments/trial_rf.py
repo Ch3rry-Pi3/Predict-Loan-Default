@@ -36,3 +36,41 @@ def run_rf_trial(
         "bootstrap": [True, False],
         "class_weight": [None, "balanced"],
     }
+
+    cv = StratifiedKFold(n_splits=N_FOLDS, shuffle=True, random_state=RANDOM_STATE)
+    search_random_state = int(rng.integers(0, 1_000_000))
+
+    with mlflow.start_run(run_name="RF_trial_{trial_idx + 1}", nested=True):
+        mlflow.set_tags({"model": "RandomForest", "trial": trial_idx + 1})
+        mlflow.sklearn.autolog(log_models=False)
+
+        search = RandomizedSearchCV(
+            estimator=clf,
+            param_distributions=dist,
+            n_iter=1,
+            scoring="accuracy",
+            cv=cv,
+            random_state=search_random_state,
+            n_jobs=-1,
+            verbose=1,
+            refit=True,
+        )
+
+        search.fit(X_train, y_train)
+
+        best = search.best_estimator_
+
+        try:
+            y_prob = best.predict_proba(X_test)[:, 1]
+        except Exception:
+            proba = best.predict(X_test)
+            y_prob = proba[:, 1] if getattr(proba, "ndim", 1) > 1 else np.ravel(proba)
+
+        m = metrics_dict(y_test, y_prob=)
+        
+        mlflow.log_params({"search": "RandomizedSearchCV", **search.best_params_})
+        mlflow.log_metrics({"cv_accuracy": float(search.best_score_), **m})
+
+        return {"params": search.best_params_, "cv_accuracy": float(search.best_score_)}
+        
+
