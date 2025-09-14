@@ -8,3 +8,7 @@ wheels/
 
 # Virtual environments
 .venv
+
+# MLflow artifacts
+mlflow_artifacts/*
+!mlflow_artifacts/README.md
